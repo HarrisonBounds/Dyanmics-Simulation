@@ -13,6 +13,7 @@ class Solver():
         self.theta_jack = sym.Function('theta_jack')(self.t)
         
         self.y_matrix = sym.Matrix([0, 1, 0, 0])
+        self.z_matrix = sym.Matrix([0, 0, 0, 1])
         
         self.inertia_matrix_box = sym.Matrix([[self.m_box, 0, 0, 0, 0, 0],
                                          [0, self.m_box, 0, 0, 0, 0],
@@ -51,13 +52,13 @@ class Solver():
     def compute_Lagrangian(self):
         ke_r1 = 1/2 * self.m1 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(self.r, 0, 0, 1))
         ke_r2 = 1/2 * self.m2 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(0, -self.r, 0, 1))
-        ke_r3 = 1/2 * self.m3 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(-self.x, 0, 0, 1))
+        ke_r3 = 1/2 * self.m3 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(-self.r, 0, 0, 1))
         ke_r4 = 1/2 * self.m4 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(0, self.y, 0, 1))
         
         pe_r1 = self.m1 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(self.r, 0, 0, 1))
         pe_r2 = self.m2 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(0, -self.r, 0, 1))
-        pe_r3 = self.m3 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(-self.x, 0, 0, 1))
-        pe_r4 = self.m4 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(0, self.y, 0, 1))
+        pe_r3 = self.m3 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(-self.r, 0, 0, 1))
+        pe_r4 = self.m4 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(0, self.r, 0, 1))
         
         ke_jack = ke_r1 + ke_r2 + ke_r3 + ke_r4
         pe_jack = pe_r1 + pe_r2 + pe_r3 + pe_r4
@@ -67,11 +68,16 @@ class Solver():
         g_w_box_inv = self.inv(self.g_w_box)
         g_w_box_dot = self.g_w_box.diff(self.t)
         
+        V_w_box = self.unhat(g_w_box_inv @ g_w_box_dot)
         
+        ke_box = 1/2 * V_w_box.T @ self.inertia_matrix_box @ V_w_box
+        pe_box = self.m_box * self.g * self.y_matrix @ (self.g_w_box @ self.z_matrix)
         
+        l_box = ke_box - pe_box
         
+        l = l_jack + l_box
         
-        
+        return l
         
     def unhat(self, g):
         unhatted_g = sym.Matrix([g[0, -1], g[1, -1], g[2, -1], g[2, 1], g[0, 2], g[1, 0]])
