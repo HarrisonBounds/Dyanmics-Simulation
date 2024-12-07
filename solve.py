@@ -1,4 +1,5 @@
 import sympy as sym
+import numpy as np
 
 class Solver():
     def __init__(self):
@@ -63,12 +64,35 @@ class Solver():
         
         l_jack = ke_jack - pe_jack
         
+        g_w_box_inv = self.inv(self.g_w_box)
+        g_w_box_dot = self.g_w_box.diff(self.t)
         
         
-    def unhat(self):
-        pass
-    def inv(self):
-        pass
+        
+        
+        
+        
+        
+    def unhat(self, g):
+        unhatted_g = sym.Matrix([g[0, -1], g[1, -1], g[2, -1], g[2, 1], g[0, 2], g[1, 0]])
+        return unhatted_g
+    
+    def inv(self, g):
+        R_t = sym.Matrix([[g[0, 0], g[1, 0], g[2, 0]],
+                    [g[0, 1], g[1, 1], g[2, 1]],
+                    [g[0, 2], g[1, 2], g[2, 2]]])
+
+        p = sym.Matrix([g[0, 3], g[1, 3], g[2, 3]])
+
+        R_t_p = -(R_t * p)
+
+        inverse_g = sym.Matrix([[R_t[0, 0], R_t[0, 1], R_t[0, 2], R_t_p[0]],
+                                [R_t[1, 0], R_t[1, 1], R_t[1, 2], R_t_p[1]],
+                                [R_t[2, 0], R_t[2, 1], R_t[2, 2], R_t_p[2]],
+                                [0, 0, 0, 1]])
+
+        return inverse_g
+    
     def find_transforms(self):
         pass
     def EL_equations(self):
