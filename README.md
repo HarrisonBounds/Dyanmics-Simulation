@@ -1,1 +1,1 @@
-# Dyanmics-Simulation
+# Dynamics-Simulation
