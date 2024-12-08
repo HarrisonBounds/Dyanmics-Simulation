@@ -3,7 +3,7 @@ import numpy as np
 
 class Solver():
     def __init__(self):
-        self.g, self.m1, self.m2, self.m3, self.m4, self.m_box, self.t, self.r = sym.symbols('g m1 m2 m3 m4 mbox t x y r')
+        self.g, self.m1, self.m2, self.m3, self.m4, self.m_box, self.t, self.r = sym.symbols('g m1 m2 m3 m4 mbox t r')
 
         self.x_box = sym.Function('x_box')(self.t)
         self.y_box = sym.Function('y_box')(self.t)
@@ -50,15 +50,25 @@ class Solver():
         self.g_w_jack = self.g_w_box @ (self.g_box_jack_rotation @ self.g_box_jack_translation)
         
     def compute_Lagrangian(self):
-        ke_r1 = 1/2 * self.m1 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(self.r, 0, 0, 1))
-        ke_r2 = 1/2 * self.m2 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(0, -self.r, 0, 1))
-        ke_r3 = 1/2 * self.m3 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(-self.r, 0, 0, 1))
-        ke_r4 = 1/2 * self.m4 * self.g_w_jack @ (self.g_w_jack @ sym.Matrix(0, self.y, 0, 1))
+        ke_r1 = 1/2 * self.m1 * ((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t))
+        ke_r2 = 1/2 * self.m2 * ((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t))
+        ke_r3 = 1/2 * self.m3 * ((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t))
+        ke_r4 = 1/2 * self.m4 * ((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t))
         
-        pe_r1 = self.m1 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(self.r, 0, 0, 1))
-        pe_r2 = self.m2 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(0, -self.r, 0, 1))
-        pe_r3 = self.m3 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(-self.r, 0, 0, 1))
-        pe_r4 = self.m4 * self.g * self.y_matrix @ (self.g_w_jack @ sym.Matrix(0, self.r, 0, 1))
+        print("ke_r1:", type(ke_r1))
+        print("ke_r2:", type(ke_r2))
+        print("ke_r3:", type(ke_r3))
+        print("ke_r4:", type(ke_r4))
+        
+        pe_r1 = self.m1 * self.g * (self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).dot(self.y_matrix)
+        pe_r2 = self.m2 * self.g * (self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).dot(self.y_matrix)
+        pe_r3 = self.m3 * self.g *(self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).dot(self.y_matrix)
+        pe_r4 = self.m4 * self.g * (self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).dot(self.y_matrix)
+        
+        print("pe_r1:", type(pe_r1))
+        print("pe_r2:", type(pe_r2))
+        print("pe_r3:", type(pe_r3))
+        print("pe_r4:", type(pe_r4))
         
         ke_jack = ke_r1 + ke_r2 + ke_r3 + ke_r4
         pe_jack = pe_r1 + pe_r2 + pe_r3 + pe_r4
@@ -70,9 +80,14 @@ class Solver():
         
         V_w_box = self.unhat(g_w_box_inv @ g_w_box_dot)
         
-        ke_box = 1/2 * V_w_box.T @ self.inertia_matrix_box @ V_w_box
-        pe_box = self.m_box * self.g * self.y_matrix @ (self.g_w_box @ self.z_matrix)
+        print("V_w_box: ", type(V_w_box))
         
+        ke_box = 1/2 * (V_w_box.T @ self.inertia_matrix_box).dot(V_w_box)
+        pe_box = self.m_box * self.g * (self.g_w_box @ self.z_matrix).dot(self.y_matrix)
+        
+        print("ke box: ", type(ke_box))
+        print("pe box: ", type(pe_box))
+                
         l_box = ke_box - pe_box
         
         l = l_jack + l_box
@@ -99,10 +114,17 @@ class Solver():
 
         return inverse_g
     
-    def find_transforms(self):
-        pass
-    def EL_equations(self):
-        pass
+    def solve_EL(self):
+        l = self.compute_Lagrangian()
+        lhs = sym.Matrix([(l.diff(self.qdot) - l.diff(self.q))])
+        rhs = sym.Matrix([0, 0, 0, 0, 0, 0])
+        
+        el = sym.Eq(lhs, rhs)
+        
+        solved = sym.solve(el, [self.qddot], dict=False)
+        print(solved)
+        return solved
+        
     def simulate(self):
         pass
     def integrate(self):
@@ -113,4 +135,6 @@ class Solver():
         pass
     
         
-    
+solver = Solver()
+
+solver.solve_EL()
