@@ -17,35 +17,35 @@ class Solver():
         self.z_matrix = sym.Matrix([0, 0, 0, 1])
         
         self.inertia_matrix_box = sym.Matrix([[self.m_box, 0, 0, 0, 0, 0],
-                                         [0, self.m_box, 0, 0, 0, 0],
-                                         [0, 0, self.m_box, 0, 0, 0],
-                                         [0, 0, 0, 0, 0, 0],
-                                         [0, 0, 0, 0, 0, 0],
-                                         [0, 0, 0, 0, 0, 1]])
-        
+                                              [0, self.m_box, 0, 0, 0, 0],
+                                              [0, 0, self.m_box, 0, 0, 0],
+                                              [0, 0, 0, 0, 0, 0],
+                                              [0, 0, 0, 0, 0, 0],
+                                              [0, 0, 0, 0, 0, 1]])
+            
         self.q = sym.Matrix([self.x_box, self.y_box, self.theta_box, self.x_jack, self.y_jack, self.theta_jack])
         self.qdot = self.q.diff(self.t)
         self.qddot = self.qdot.diff(self.t)
         
         self.g_w_box_rotation = sym.Matrix([[sym.cos(self.theta_box), -sym.sin(self.theta_box), 0, 0],
-                                       [sym.sin(self.theta_box), sym.cos(self.theta_box), 0, 0],
-                                       [0, 0, 1, 0],
-                                       [0, 0, 0, 1]])
+                                            [sym.sin(self.theta_box), sym.cos(self.theta_box), 0, 0],
+                                            [0, 0, 1, 0],
+                                            [0, 0, 0, 1]])
         
         self.g_w_box_translation = sym.Matrix([[1, 0, 0, self.x_box],
-                                          [0, 1, 0, self.y_box],
-                                          [0, 0, 1, 0],
-                                          [0, 0, 0, 1]])
+                                               [0, 1, 0, self.y_box],
+                                               [0, 0, 1, 0],
+                                               [0, 0, 0, 1]])
         
         self.g_box_jack_rotation = sym.Matrix([[sym.cos(self.theta_jack), -sym.sin(self.theta_jack), 0, 0],
-                                          [sym.sin(self.theta_jack), sym.cos(self.theta_jack), 0, 0],
-                                          [0, 0, 1, 0],
-                                          [0, 0, 0, 1]])
+                                               [sym.sin(self.theta_jack), sym.cos(self.theta_jack), 0, 0],
+                                               [0, 0, 1, 0],
+                                               [0, 0, 0, 1]])
         
         self.g_box_jack_translation = sym.Matrix([[1, 0, 0, self.x_jack],
-                                             [0, 1, 0, self.y_jack],
-                                             [0, 0, 1, 0],
-                                             [0, 0, 0, 1]])
+                                                  [0, 1, 0, self.y_jack],
+                                                  [0, 0, 1, 0],
+                                                  [0, 0, 0, 1]])
         
         self.g_w_box = self.g_w_box_rotation @ self.g_box_jack_translation
         self.g_w_jack = self.g_w_box @ (self.g_box_jack_rotation @ self.g_box_jack_translation)
@@ -120,7 +120,7 @@ class Solver():
     
     def solve_EL(self):
         l = self.compute_Lagrangian()
-        lhs = sym.simplify(sym.Matrix([(l.diff(self.qdot) - l.diff(self.q))]))
+        lhs = sym.simplify(sym.Matrix([(l.diff(self.qdot).diff(self.t) - l.diff(self.q))]))
         rhs = sym.simplify(sym.Matrix([0, 0, 0, 0, 0, 0]))
         
         el = sym.Eq(lhs, rhs)
@@ -182,3 +182,4 @@ class Solver():
 solver = Solver()
 
 solver.solve_EL()
+solver.plot()
