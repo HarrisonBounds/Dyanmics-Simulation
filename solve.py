@@ -1,5 +1,6 @@
 import sympy as sym
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Solver():
     def __init__(self):
@@ -49,21 +50,24 @@ class Solver():
         self.g_w_box = self.g_w_box_rotation @ self.g_box_jack_translation
         self.g_w_jack = self.g_w_box @ (self.g_box_jack_rotation @ self.g_box_jack_translation)
         
+        self.subs_dict = {self.g: 9.8, self.m1: 1, self.m2: 1, self.m3: 1, self.m4: 1, self.m_box: 2, self.r: 1}
+        self.initial_conditions = [3, 3, np.pi/6, 2.5, 3.2, np.pi/2]
+        
     def compute_Lagrangian(self):
-        ke_r1 = 1/2 * self.m1 * ((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t))
-        ke_r2 = 1/2 * self.m2 * ((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t))
-        ke_r3 = 1/2 * self.m3 * ((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t))
-        ke_r4 = 1/2 * self.m4 * ((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t))
+        ke_r1 = sym.simplify(1/2 * self.m1 * ((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).diff(self.t)))
+        ke_r2 = sym.simplify(1/2 * self.m2 * ((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).diff(self.t)))
+        ke_r3 = sym.simplify(1/2 * self.m3 * ((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).diff(self.t)))
+        ke_r4 = sym.simplify(1/2 * self.m4 * ((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t)).dot((self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).diff(self.t)))
         
         print("ke_r1:", type(ke_r1))
         print("ke_r2:", type(ke_r2))
         print("ke_r3:", type(ke_r3))
         print("ke_r4:", type(ke_r4))
         
-        pe_r1 = self.m1 * self.g * (self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).dot(self.y_matrix)
-        pe_r2 = self.m2 * self.g * (self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).dot(self.y_matrix)
-        pe_r3 = self.m3 * self.g *(self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).dot(self.y_matrix)
-        pe_r4 = self.m4 * self.g * (self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).dot(self.y_matrix)
+        pe_r1 = sym.simplify(self.m1 * self.g * (self.g_w_jack @ sym.Matrix([self.r, 0, 0, 1])).dot(self.y_matrix))
+        pe_r2 = sym.simplify(self.m2 * self.g * (self.g_w_jack @ sym.Matrix([0, -self.r, 0, 1])).dot(self.y_matrix))
+        pe_r3 = sym.simplify(self.m3 * self.g * (self.g_w_jack @ sym.Matrix([-self.r, 0, 0, 1])).dot(self.y_matrix))
+        pe_r4 = sym.simplify(self.m4 * self.g * (self.g_w_jack @ sym.Matrix([0, self.r, 0, 1])).dot(self.y_matrix))
         
         print("pe_r1:", type(pe_r1))
         print("pe_r2:", type(pe_r2))
@@ -82,8 +86,8 @@ class Solver():
         
         print("V_w_box: ", type(V_w_box))
         
-        ke_box = 1/2 * (V_w_box.T @ self.inertia_matrix_box).dot(V_w_box)
-        pe_box = self.m_box * self.g * (self.g_w_box @ self.z_matrix).dot(self.y_matrix)
+        ke_box = sym.simplify(1/2 * (V_w_box.T @ self.inertia_matrix_box).dot(V_w_box))
+        pe_box = sym.simplify(self.m_box * self.g * (self.g_w_box @ self.z_matrix).dot(self.y_matrix))
         
         print("ke box: ", type(ke_box))
         print("pe box: ", type(pe_box))
@@ -116,24 +120,64 @@ class Solver():
     
     def solve_EL(self):
         l = self.compute_Lagrangian()
-        lhs = sym.Matrix([(l.diff(self.qdot) - l.diff(self.q))])
-        rhs = sym.Matrix([0, 0, 0, 0, 0, 0])
+        lhs = sym.simplify(sym.Matrix([(l.diff(self.qdot) - l.diff(self.q))]))
+        rhs = sym.simplify(sym.Matrix([0, 0, 0, 0, 0, 0]))
         
         el = sym.Eq(lhs, rhs)
         
         solved = sym.solve(el, [self.qddot], dict=False)
         print(solved)
+        
+        solved_func = sym.Matrix([solved[self.qddot[0]], solved[self.qddot[1]], solved[self.qddot[2]], solved[self.qddot[3]], solved[self.qddot[4]], solved[self.qddot[5]]])
+        solved_subs = solved_func.subs(self.subs_dict)
+        
+        self.lamb_func = sym.lambdify([self.q[0], self.q[1], self.q[2], self.q[3], self.q[4], self.q[5], self.qdot[0], self.qdot[1]. self.qdot[2], self.qdot[3], self.qdot[4], self.qdot[5]], solved_subs)
+        
         return solved
         
-    def simulate(self):
-        pass
-    def integrate(self):
-        pass
-    def xddot(self):
-        pass
-    def dyn(self, s):
-        pass
+    def simulate(self, f, x0, tspan, dt, integrate):
+        N = int((max(tspan)-min(tspan))/dt)
+        x = np.copy(x0)
+        tvec = np.linspace(min(tspan),max(tspan),N)
+        xtraj = np.zeros((len(x0),N))
+        for i in range(1,N):
+            xtraj[:,i]=integrate(f,x,dt)
+            xtraj[-1, i] = tvec[i]
+            x = np.copy(xtraj[:,i])
+        return xtraj, tvec
     
+    def integrate(self, f, xt, dt):
+        k1 = dt * f(xt)
+        k2 = dt * f(xt+k1/2.)
+        k3 = dt * f(xt+k2/2.)
+        k4 = dt * f(xt+k3)
+        new_xt = xt + (1/6.) * (k1+2.0*k2+2.0*k3+k4)
+        return new_xt
+    
+    def xddot(self, s):
+        return self.lamb_func(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9], s[10], s[11])
+    
+    def dyn(self, s):
+        return np.array([s[6], s[7], s[8], s[9], s[10], s[11], self.xddot(s)[0][0], self.xddot(s)[1][0], self.xddot(s)[2][0], self.xddot(s)[3][0], self.xddot(s)[4][0], self.xddot(s)[5][0]])
+    
+    def plot(self):
+        traj, tvec = self.simulate(self.dyn, self.initial_conditions, [0, 10], 0.01, self.integrate)
+        plt.plot(tvec, traj[0])
+        plt.plot(tvec, traj[1])
+        plt.plot(tvec, traj[2])
+        plt.plot(tvec, traj[3])
+        plt.plot(tvec, traj[4])
+        plt.plot(tvec, traj[5])
+        plt.plot(tvec, traj[6])
+        plt.plot(tvec, traj[7])
+        plt.plot(tvec, traj[8])
+        plt.plot(tvec, traj[9])
+        plt.plot(tvec, traj[10])
+        plt.plot(tvec, traj[11])
+        plt.title(r'Theta vs time')
+        plt.xlabel("time")
+        plt.ylabel(r'Trajectory')
+        plt.show()
         
 solver = Solver()
 
